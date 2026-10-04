@@ -1,39 +1,39 @@
 import { OverlayCoordinates } from '../types/certificate';
 
-// Default percentage coordinates (0% to 100%) for accurate placement
+// Default percentage coordinates with text raised ~2cm upward and underlines removed
 export const DEFAULT_OVERLAY_COORDINATES: OverlayCoordinates = {
   name: {
-    x: 50,
-    y: 50.5,
-    fontSize: 28, // Relative base points
+    x: 54.5,
+    y: 51.2, // Raised ~2cm upward from the former underline
+    fontSize: 26,
     align: 'center'
   },
   department: {
-    x: 50,
-    y: 58.0,
-    fontSize: 22,
+    x: 59.0,
+    y: 56.4, // Raised ~2cm upward from the former underline
+    fontSize: 20,
     align: 'center'
   },
   team: {
-    x: 50,
-    y: 65.0,
-    fontSize: 21,
+    x: 56.2,
+    y: 61.2, // Raised ~2cm upward from the former underline
+    fontSize: 20,
     align: 'center'
   },
   certId: {
-    x: 86.0,
-    y: 11.5,
-    fontSize: 12,
+    x: 83.5,
+    y: 15.0,
+    fontSize: 11,
     align: 'right'
   },
   qrCode: {
-    x: 86.5,
-    y: 77.0,
-    size: 11.5 // Percent of width
+    x: 79.5,
+    y: 85.5,
+    size: 9.5
   }
 };
 
-const STORAGE_KEY = 'startathon_overlay_coords_v1';
+const STORAGE_KEY = 'startathon_overlay_coords_v4';
 
 export function getOverlayCoordinates(): OverlayCoordinates {
   if (typeof window === 'undefined') return DEFAULT_OVERLAY_COORDINATES;

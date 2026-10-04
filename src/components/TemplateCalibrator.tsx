@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { OverlayCoordinates, CertificateData } from '../types/certificate';
 import { getOverlayCoordinates, saveOverlayCoordinates, resetOverlayCoordinates } from '../utils/overlayConfig';
+import { getStoredCertificates } from '../services/certificateService';
 import { CertificateCard } from './CertificateCard';
 import { Sliders, RotateCcw, Check, Sparkles } from 'lucide-react';
 
@@ -8,13 +9,14 @@ export const TemplateCalibrator: React.FC = () => {
   const [coords, setCoords] = useState<OverlayCoordinates>(getOverlayCoordinates());
   const [savedMessage, setSavedMessage] = useState(false);
 
-  // Mock certificate for live visual alignment
-  const sampleCertificate: CertificateData = {
+  // Calibration sample certificate
+  const stored = getStoredCertificates();
+  const sampleCertificate: CertificateData = stored.length > 0 ? stored[0] : {
     certificateId: 'START26-0001',
     title: 'Mr.',
-    fullName: 'Prajan L',
-    department: 'Computer Science and Engineering',
-    teamName: 'Innovators',
+    fullName: 'Sample Participant',
+    department: 'Department of Engineering',
+    teamName: 'Innovators Team',
     email: 'participant@example.com',
     eventName: 'STARTATHON 2026',
     eventDate: '25 September 2026',

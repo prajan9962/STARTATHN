@@ -4,7 +4,10 @@
  */
 export function normalizeFullName(rawName: string): string {
   if (!rawName) return '';
-  const trimmed = rawName.trim().replace(/\s+/g, ' ');
+  let trimmed = rawName.trim().replace(/\s+/g, ' ');
+
+  // Strip leading title prefix if the user typed it into the full name input
+  trimmed = trimmed.replace(/^(mr\.|ms\.|dr\.|mrs\.|prof\.)\s+/i, '');
 
   // Split by whitespace
   const words = trimmed.split(' ');

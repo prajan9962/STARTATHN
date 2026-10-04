@@ -12,6 +12,8 @@ export interface RenderCertificateOptions {
 
 /**
  * Draws the certificate onto an HTML5 Canvas with high DPI and renders all dynamic text and QR.
+ * The template background image has all underline bars and bottom signature lines permanently removed.
+ * Text is placed with generous breathing room ~2cm upward in royal navy.
  */
 export async function renderCertificateToCanvas(
   options: RenderCertificateOptions
@@ -21,17 +23,20 @@ export async function renderCertificateToCanvas(
   const ctx = canvas.getContext('2d', { alpha: false });
   if (!ctx) throw new Error('Could not obtain canvas 2D context');
 
-  // Load template image
-  const templateUrl = customTemplateUrl || '/certificate-template.png';
+  // Load template image (with cache-busting timestamp so browser reloads clean template immediately)
+  const baseTemplateUrl = customTemplateUrl || '/certificate-template.png';
+  const templateUrl = baseTemplateUrl.includes('?')
+    ? baseTemplateUrl
+    : `${baseTemplateUrl}?v=${Date.now()}`;
+
   const img = new Image();
   img.crossOrigin = 'anonymous';
 
   await new Promise<void>((resolve, reject) => {
     img.onload = () => resolve();
     img.onerror = () => {
-      // Fallback to jpg if png failed
-      if (!customTemplateUrl && templateUrl.endsWith('.png')) {
-        img.src = '/certificate-template.jpg';
+      if (!customTemplateUrl && baseTemplateUrl.endsWith('.png')) {
+        img.src = `/certificate-template.jpg?v=${Date.now()}`;
       } else {
         reject(new Error(`Failed to load certificate template image from ${templateUrl}`));
       }
@@ -39,52 +44,56 @@ export async function renderCertificateToCanvas(
     img.src = templateUrl;
   });
 
-  // Target high-resolution canvas (matching image natural width or high-DPI standard)
+  // Target high-resolution canvas (matching natural image resolution)
   const targetWidth = Math.max(img.naturalWidth || 1920, 1920);
-  const targetHeight = Math.max(img.naturalHeight || 1440, Math.round(targetWidth * (img.naturalHeight / img.naturalWidth)));
+  const targetHeight = Math.max(
+    img.naturalHeight || 1440,
+    Math.round(targetWidth * (img.naturalHeight / img.naturalWidth))
+  );
 
   canvas.width = targetWidth;
   canvas.height = targetHeight;
 
-  // 1. Draw template background
+  // 1. Draw template background (pristine template without underlines or signatures)
   ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-  // 2. Fetch coordinates configuration
+  // 2. Fetch coordinates configuration (text raised ~2cm upward)
   const coords = getOverlayCoordinates();
-
-  // Helper scale factor relative to standard 1200px width
   const scale = targetWidth / 1200;
 
   // Text Rendering Configuration
-  ctx.fillStyle = '#0B192C'; // Rich navy blue
-  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#0B192C'; // Rich royal navy
+  ctx.textBaseline = 'middle'; // Center text vertically in the clean open space
 
-  // 3. Render Participant Name: format "Mr./Ms. [FULL NAME]"
-  const fullNameFormatted = `${certificate.title} ${certificate.fullName}`;
-  const nameFontSize = Math.round(coords.name.fontSize * scale * 1.3);
+  // 3. Render Participant Name (raised ~2cm upward, elegant serif)
+  const nameToDisplay = certificate.title === 'Dr.'
+    ? `Dr. ${certificate.fullName}`
+    : certificate.fullName;
+
+  const nameFontSize = Math.round(coords.name.fontSize * scale * 1.2);
   ctx.font = `bold ${nameFontSize}px 'Playfair Display', 'Cinzel', Georgia, serif`;
   ctx.textAlign = coords.name.align;
   const nameX = (coords.name.x / 100) * targetWidth;
   const nameY = (coords.name.y / 100) * targetHeight;
-  ctx.fillText(fullNameFormatted, nameX, nameY);
+  ctx.fillText(nameToDisplay, nameX, nameY);
 
-  // 4. Render Department
-  const deptFontSize = Math.round(coords.department.fontSize * scale * 1.15);
+  // 4. Render Department (raised ~2cm upward)
+  const deptFontSize = Math.round(coords.department.fontSize * scale * 1.05);
   ctx.font = `600 ${deptFontSize}px 'Montserrat', 'Inter', Arial, sans-serif`;
   ctx.textAlign = coords.department.align;
   const deptX = (coords.department.x / 100) * targetWidth;
   const deptY = (coords.department.y / 100) * targetHeight;
   ctx.fillText(certificate.department, deptX, deptY);
 
-  // 5. Render Team Name
-  const teamFontSize = Math.round(coords.team.fontSize * scale * 1.15);
+  // 5. Render Team Name (raised ~2cm upward)
+  const teamFontSize = Math.round(coords.team.fontSize * scale * 1.05);
   ctx.font = `600 ${teamFontSize}px 'Montserrat', 'Inter', Arial, sans-serif`;
   ctx.textAlign = coords.team.align;
   const teamX = (coords.team.x / 100) * targetWidth;
   const teamY = (coords.team.y / 100) * targetHeight;
   ctx.fillText(certificate.teamName, teamX, teamY);
 
-  // 6. Render Certificate ID (unobtrusive, highly professional)
+  // 6. Render Certificate ID (unobtrusive, official credential number)
   const certIdFontSize = Math.round(coords.certId.fontSize * scale);
   ctx.font = `600 ${certIdFontSize}px 'Montserrat', monospace, sans-serif`;
   ctx.textAlign = coords.certId.align;
@@ -93,7 +102,7 @@ export async function renderCertificateToCanvas(
   const certIdY = (coords.certId.y / 100) * targetHeight;
   ctx.fillText(`ID: ${certificate.certificateId}`, certIdX, certIdY);
 
-  // 7. Render QR Code
+  // 7. Render QR Code (positioned in clean lower-right quadrant, well inside borders)
   try {
     const qrDataUrl = await generateVerificationQRCode(certificate.certificateId);
     const qrImg = new Image();
@@ -107,12 +116,12 @@ export async function renderCertificateToCanvas(
     const qrX = (coords.qrCode.x / 100) * targetWidth - (qrSize / 2);
     const qrY = (coords.qrCode.y / 100) * targetHeight - (qrSize / 2);
 
-    // Subtle white background for QR code for contrast & scan reliability
+    // Crisp card backing for QR code
     ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
     ctx.roundRect(qrX - 4, qrY - 4, qrSize + 8, qrSize + 8, 4);
     ctx.fill();
-    ctx.strokeStyle = '#D4AF37'; // subtle gold border
+    ctx.strokeStyle = '#D4AF37'; // Subtle gold border
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
@@ -120,9 +129,10 @@ export async function renderCertificateToCanvas(
 
     // Caption below QR
     ctx.fillStyle = '#475569';
-    ctx.font = `500 ${Math.round(8 * scale)}px sans-serif`;
+    ctx.font = `600 ${Math.round(8 * scale)}px sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText('Scan to Verify', qrX + qrSize / 2, qrY + qrSize + 10 * scale);
+    ctx.textBaseline = 'top';
+    ctx.fillText('Scan to Verify', qrX + qrSize / 2, qrY + qrSize + 6 * scale);
   } catch (err) {
     console.warn('Failed to draw QR code onto certificate:', err);
   }

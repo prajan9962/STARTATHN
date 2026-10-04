@@ -102,14 +102,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       };
 
       const result = await issueCertificate(inputs);
-
-      if (result.isExisting) {
-        setExistingCert(result.certificate);
-        setShowExistingModal(true);
-      } else {
-        setPreviewCert(result.certificate);
-        setShowPreviewModal(true);
-      }
+      setPreviewCert(result.certificate);
+      setShowPreviewModal(true);
     } catch (err: any) {
       console.error('Error generating certificate:', err);
       setErrorMsg(err?.message || 'Failed to generate certificate. Please try again.');

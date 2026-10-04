@@ -11,25 +11,10 @@ export const EVENT_NAME = 'STARTATHON 2026';
 export const EVENT_DATE = '25 September 2026';
 export const ORGANIZER_INFO = "Students' Council, St. Joseph College of Engineering";
 
-const STORAGE_KEY = 'startathon_2026_certificates_v1';
+const STORAGE_KEY = 'startathon_2026_certificates_v2';
 
-// Initial pre-seeded registry (includes Prajan L as START26-0001)
-const INITIAL_CERTIFICATES: CertificateData[] = [
-  {
-    certificateId: 'START26-0001',
-    title: 'Mr.',
-    fullName: 'Prajan L',
-    department: 'Computer Science and Engineering',
-    teamName: 'Innovators',
-    email: 'prajanlakshmanan12@gmail.com',
-    mobile: '+91 98765 43210',
-    eventName: EVENT_NAME,
-    eventDate: EVENT_DATE,
-    issuedAt: '2026-09-25T10:00:00.000Z',
-    status: 'issued',
-    verificationUrl: getVerificationUrl('START26-0001'),
-  },
-];
+// Empty default registry: all certificate datas are strictly obtained from user form submissions
+const INITIAL_CERTIFICATES: CertificateData[] = [];
 
 /**
  * Loads all certificates from persistent storage.
@@ -64,7 +49,7 @@ function saveStoredCertificates(certs: CertificateData[]): void {
 }
 
 /**
- * Safely generates the next sequential certificate ID (e.g. START26-0002).
+ * Safely generates the next sequential certificate ID (e.g. START26-0001, START26-0002).
  */
 export function getNextCertificateId(): string {
   const certs = getStoredCertificates();
@@ -112,7 +97,7 @@ export async function getCertificateById(certificateId: string): Promise<Certifi
 }
 
 /**
- * Issues a new official certificate.
+ * Issues a new official certificate using the EXACT data obtained from the filled form.
  */
 export async function issueCertificate(inputs: CertificateFormInputs): Promise<{
   certificate: CertificateData;
@@ -120,16 +105,7 @@ export async function issueCertificate(inputs: CertificateFormInputs): Promise<{
 }> {
   const cleanEmail = normalizeEmail(inputs.email);
 
-  // 1. Duplicate check (email + event)
-  const existing = await findCertificateByEmail(cleanEmail);
-  if (existing) {
-    return {
-      certificate: existing,
-      isExisting: true,
-    };
-  }
-
-  // 2. Normalize participant details
+  // 1. Normalize participant details obtained directly from form
   const normalizedName = normalizeFullName(inputs.fullName);
   const normalizedDept = normalizeDepartment(inputs.department);
   const normalizedTeam = normalizeTeamName(inputs.teamName);
@@ -139,13 +115,29 @@ export async function issueCertificate(inputs: CertificateFormInputs): Promise<{
   if (!normalizedTeam) throw new Error('Please enter your team name.');
   if (!cleanEmail) throw new Error('Please enter your email address.');
 
-  // 3. Generate unique sequential Certificate ID
-  const certId = inputs.certificateId && inputs.certificateId.startsWith('START26-')
-    ? inputs.certificateId.trim().toUpperCase()
-    : getNextCertificateId();
+  const certs = getStoredCertificates();
+  const existingIndex = certs.findIndex(
+    (c) => c.email.toLowerCase() === cleanEmail && c.eventName === EVENT_NAME
+  );
+
+  let certId: string;
+  let isExisting = false;
+
+  if (existingIndex !== -1) {
+    // Participant previously registered with this email
+    // Retain their allocated Certificate ID, but update with their freshly filled form inputs!
+    certId = certs[existingIndex].certificateId;
+    isExisting = true;
+  } else {
+    // New participant: assign next sequential Certificate ID
+    certId = inputs.certificateId && inputs.certificateId.startsWith('START26-')
+      ? inputs.certificateId.trim().toUpperCase()
+      : getNextCertificateId();
+  }
 
   const verificationUrl = getVerificationUrl(certId);
 
+  // Certificate data obtained directly from the filled form
   const certData: CertificateData = {
     certificateId: certId,
     title: inputs.title,
@@ -156,18 +148,22 @@ export async function issueCertificate(inputs: CertificateFormInputs): Promise<{
     mobile: inputs.mobile?.trim() || '',
     eventName: EVENT_NAME,
     eventDate: EVENT_DATE,
-    issuedAt: new Date().toISOString(),
+    issuedAt: existingIndex !== -1 ? certs[existingIndex].issuedAt : new Date().toISOString(),
     status: 'issued',
     verificationUrl,
   };
 
-  const certs = getStoredCertificates();
-  certs.unshift(certData);
+  if (existingIndex !== -1) {
+    certs[existingIndex] = certData;
+  } else {
+    certs.unshift(certData);
+  }
+
   saveStoredCertificates(certs);
 
   return {
     certificate: certData,
-    isExisting: false,
+    isExisting,
   };
 }
 
@@ -176,7 +172,6 @@ export async function issueCertificate(inputs: CertificateFormInputs): Promise<{
  */
 export async function fetchAllCertificates(): Promise<CertificateData[]> {
   const certs = getStoredCertificates();
-  // Sort newest issued first
   return [...certs].sort((a, b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime());
 }
 
