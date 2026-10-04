@@ -1,0 +1,6 @@
+{
+  "name": "STARTATHON 2026 - E-Certificate Generator",
+  "description": "Official E-Certificate portal for STARTATHON 2026 participants organized by Students' Council, St. Joseph College of Engineering.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

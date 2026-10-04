@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-serif {
+    font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+  }
+}
